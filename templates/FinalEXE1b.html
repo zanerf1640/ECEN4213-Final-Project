@@ -1,20 +1,24 @@
 <html>
 	<head>
 		<!-- define your title  -->
+		 <title>ECEN4213 Bulbs and Buttons</title>
 
 		<script>
 			function turn_on_light()
 			{
 				// find out the id where you can to change the image
-				element=document.getElementById('find the id')
+				element=document.getElementById('myimage')
 
 				// select an image to display
-				element.src="image path";
+				element.src="../static/pic_bulbon.png";
 			}
 
 			function turn_off_light()
 			{
 				// finsh this function ti display another image
+				element=document.getElementById('myimage')
+				// select an image to display
+				element.src="../static/pic_bulboff.png";
 			}
 
 			
@@ -33,13 +37,13 @@
 
 
 		<!-- to adjust the size of the image, you can modify  width="300px" height="400px" -->
-		<center><img id='myimage' alt='write something' width="300px" height="400px" src="../static/img name"></center>
+		<center><img id='myimage' alt='write something' width="300px" height="400px" src="../static/pic_bulboff.png"></center>
 		
 		<!-- to modify the position and size of the buttons, you can modify  style="position:relative;top:5%;left:30%" 
 		and style="font-size:30;height:100px; width:200px;" -->
 		<div  style="position:relative;top:5%;left:30%">
-	      <input style="font-size:30;height:100px; width:200px;" type = "button" onclick="turn_on_light()" id = "turn_on" value = "None" />
-	      <input style="font-size:30;height:100px; width:200px;" type = "button" onclick="turn_off_light()" id = "turn_off" value = "None" />
+	      <input style="font-size:30;height:100px; width:200px;" type = "button" onclick="turn_on_light()" id = "turn_on" value = "On" />
+	      <input style="font-size:30;height:100px; width:200px;" type = "button" onclick="turn_off_light()" id = "turn_off" value = "Off" />
     	</div>
 
 

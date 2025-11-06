@@ -1,4 +1,4 @@
-#This is a basic script to host a webpage at the IP specified
+# This is a basic script to host a webpage at the IP specified
 # By the 'IP_Address' variable
 
 # Import library to create webserver to host webpage
@@ -18,11 +18,11 @@ sock_1 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock_1.bind(server_address_1)
 
 
-#Find the IP Address of your device
-#Use the 'ifconfig' terminal command, the address should be in the format  "XX.XXX.XXX.XXX"
-IP_Address = 'XX.XXX.XXX.XXX'
+# Find the IP Address of your device
+# Use the 'ifconfig' terminal command, the address should be in the format  "XX.XXX.XXX.XXX"
+IP_Address = '10.227.84.253'
 PORT = 8080
-#Connect the *.html page to the server and run as the default page
+# Connect the *.html page to the server and run as the default page
 
 
 @app.route('/')
@@ -52,6 +52,7 @@ def gen(camera):
     frame = ''
     while True:
         # receive image to the client: frame,_ = .....
+        frame,_ = sock_1.recvfrom(max_len)
         
         yield (b'--frame\r\n'
             b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
@@ -69,13 +70,26 @@ def UpFunction():
     return "Nothing"
 
 # define the rest of the functions to handle the left, right, down and stop buttons (4 functions)
-@app.route('/function_name')
-def function_name():
-    print('In XXFunction')
-    return "Nothing"
+@app.route('/LeftFunction')
+def LeftFunction():
+    print('In LeftFunction')
+    return "Left"
 
+@app.route('/RightFunction')
+def RightFunction():
+    print('In RightFunction')
+    return "Right"
 
-    
+@app.route('/StopFunction')
+def StopFunction():
+    print('In StopFunction')
+    return "Stop"
+
+@app.route('/DownFunction')
+def DownFunction():
+    print('In DownFunction')
+    return "Down"
+
 
 #Start the server
 if __name__ == "__main__":

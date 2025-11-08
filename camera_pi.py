@@ -1,35 +1,29 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-#  camera_pi.py
-#  
-#  
-#  
+# camera_pi.py — Updated for Raspberry Pi OS Bookworm
+#
 import time
-import io
 import threading
-import base64
-import cv2
-import zmq
 import socket
-from threading import Thread
+import cv2
 from picamera2 import Picamera2
 
 class Camera(object):
-    thread = None  # background thread that reads frames from camera
-    frame = None  # current frame is stored here by background thread
-    last_access = 0  # time of last client access to the camera
-    picam2 = None
+    thread = None          # background thread that reads frames
+    frame = None           # current frame as JPEG bytes
+    last_access = 0        # time of last client access
+    picam2 = None          # global camera instance
 
     def initialize(self):
         if Camera.thread is None:
-            # start background frame thread
+            # Start background thread
             Camera.thread = threading.Thread(target=self._thread)
             Camera.thread.start()
 
-            # wait until frames start to be available
+            # Wait until a frame is available
             while self.frame is None:
-                time.sleep(0)
+                time.sleep(0.1)
 
     def get_frame(self):
         Camera.last_access = time.time()
@@ -38,50 +32,52 @@ class Camera(object):
 
     @classmethod
     def _thread(cls):
-        with Picamera2.PiCamera() as camera:
-            # Camera setup: camera.resolution = (X,X)
+        # Initialize camera
+        cls.picam2 = Picamera2()
 
-            camera.hflip = True
-            camera.vflip = True
+        # Create a video configuration
+        config = cls.picam2.create_video_configuration(main={"size": (640, 480)})
+        cls.picam2.configure(config)
+        cls.picam2.start()
 
-            stream = io.BytesIO()
-            for foo in camera.capture_continuous(stream, 'jpeg',
-                                                 use_video_port=True):
-                # store frame
-                stream.seek(0)
-                cls.frame = stream.read()
+        print("Camera streaming started...")
 
-                # reset stream for next frame
-                stream.seek(0)
-                stream.truncate()
+        while True:
+            # Capture frame as a NumPy array
+            frame = cls.picam2.capture_array()
 
-                # if there hasn't been any clients asking for frames in
-                # the last 10 seconds stop the thread
-                ######################################
-                if time.time() - cls.last_access > 10:
-                    break
+            # Encode as JPEG
+            ret, jpeg = cv2.imencode('.jpg', frame)
+            if not ret:
+                continue
+
+            cls.frame = jpeg.tobytes()
+
+            # Stop thread if no client access for >10s
+            if time.time() - cls.last_access > 10:
+                print("No client access in 10s — stopping camera thread.")
+                break
+
+        cls.picam2.stop()
         cls.thread = None
+        print("Camera thread stopped.")
 
 camera = Camera()
-# Setup the UDP socket
-server_address = ('127.0.0.2',8001)
-client = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+server_address = ('127.0.0.2', 8001)
+client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 def get_f():
-    global camera,connection
     image = camera.get_frame()
-    print(len(image))
+    print(f"Sending image ({len(image)} bytes)")
     try:
-        # Send image to the server
-        client.sendto(image,server_address)
-        pass
-    except:
-        print("something happened")
+        client.sendto(image, server_address)
+    except Exception as e:
+        print("Error sending frame:", e)
 
 def read_send_image():
-    while(1):
+    while True:
         get_f()
-        time.sleep(0.01)
-       
-if __name__ == '__main__': 
-   read_send_image()
+        time.sleep(0.05)
+
+if __name__ == '__main__':
+    read_send_image()

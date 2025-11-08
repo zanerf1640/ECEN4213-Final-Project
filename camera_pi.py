@@ -1,60 +1,86 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 #  camera_pi.py
-#
-#  Debian-compatible version using OpenCV instead of picamera
-
+#  
+#  
+#  
 import time
-import socket
+import io
+import threading
+import picamera
+import base64
 import cv2
+import zmq
+import socket
+from threading import Thread
 
-class Camera:
-    def __init__(self, camera_index=0):
-        self.cap = cv2.VideoCapture(camera_index)
-        if not self.cap.isOpened():
-            raise IOError("Cannot open camera")
-        
-        # Optionally, set resolution
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+class Camera(object):
+    thread = None  # background thread that reads frames from camera
+    frame = None  # current frame is stored here by background thread
+    last_access = 0  # time of last client access to the camera
+
+    def initialize(self):
+        if Camera.thread is None:
+            # start background frame thread
+            Camera.thread = threading.Thread(target=self._thread)
+            Camera.thread.start()
+
+            # wait until frames start to be available
+            while self.frame is None:
+                time.sleep(0)
 
     def get_frame(self):
-        ret, frame = self.cap.read()
-        if not ret:
-            raise IOError("Failed to capture frame")
-        # Encode to JPEG for transmission
-        _, buffer = cv2.imencode('.jpg', frame)
-        return buffer.tobytes()
+        Camera.last_access = time.time()
+        self.initialize()
+        return self.frame
 
-    def release(self):
-        self.cap.release()
+    @classmethod
+    def _thread(cls):
+        with picamera.PiCamera() as camera:
+            # Camera setup: camera.resolution = (X,X)
 
-# UDP setup
-server_address = ('127.0.0.2', 8001)
-client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            camera.hflip = True
+            camera.vflip = True
+
+            stream = io.BytesIO()
+            for foo in camera.capture_continuous(stream, 'jpeg',
+                                                 use_video_port=True):
+                # store frame
+                stream.seek(0)
+                cls.frame = stream.read()
+
+                # reset stream for next frame
+                stream.seek(0)
+                stream.truncate()
+
+                # if there hasn't been any clients asking for frames in
+                # the last 10 seconds stop the thread
+                ######################################
+                if time.time() - cls.last_access > 10:
+                    break
+        cls.thread = None
 
 camera = Camera()
+# Setup the UDP socket
+server_address = ('127.0.0.2',8001)
+client = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 
 def get_f():
-    global camera, client
+    global camera,connection
+    image = camera.get_frame()
+    print(len(image))
     try:
-        image = camera.get_frame()
-        print(f"Captured frame size: {len(image)} bytes")
-        client.sendto(image, server_address)
-    except Exception as e:
-        print(f"Error: {e}")
+        # Send image to the server
+        client.sendto(image,server_address)
+        pass
+    except:
+        print("something happened")
 
 def read_send_image():
-    while True:
+    while(1):
         get_f()
-        time.sleep(0.05)  # ~20 FPS
-
-if __name__ == '__main__':
-    try:
-        read_send_image()
-    except KeyboardInterrupt:
-        print("\nExiting...")
-    finally:
-        camera.release()
-        client.close()
+        time.sleep(0.01)
+       
+if __name__ == '__main__': 
+   read_send_image()

@@ -8,17 +8,18 @@
 import time
 import io
 import threading
-import picamera
 import base64
 import cv2
 import zmq
 import socket
 from threading import Thread
+from picamera2 import Picamera2
 
 class Camera(object):
     thread = None  # background thread that reads frames from camera
     frame = None  # current frame is stored here by background thread
     last_access = 0  # time of last client access to the camera
+    picam2 = None
 
     def initialize(self):
         if Camera.thread is None:
@@ -37,7 +38,7 @@ class Camera(object):
 
     @classmethod
     def _thread(cls):
-        with picamera.PiCamera() as camera:
+        with Picamera2.PiCamera() as camera:
             # Camera setup: camera.resolution = (X,X)
 
             camera.hflip = True

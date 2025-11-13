@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>ECEN4213 IoT — Joystick Mode</title>
+
+  <style>
+    body {
+      text-align: center;
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    #videoStream {
+      border: 3px solid #222;
+      border-radius: 15px;
+      width: 640px;
+      height: 480px;
+      object-fit: cover;
+    }
+
+    #joystick {
+      width: 200px;
+      height: 200px;
+      background: #ddd;
+      border-radius: 50%;
+      margin: 40px auto;
+      position: relative;
+      touch-action: none;
+    }
+
+    #stick {
+      width: 60px;
+      height: 60px;
+      background: #4285f4;
+      border-radius: 50%;
+      position: absolute;
+      top: 70px;
+      left: 70px;
+      transition: 0.05s;
+    }
+
+    .sensor-row {
+      margin-top: 20px;
+    }
+
+    .sensor-btn {
+      font-size: 30px;
+      height: 100px;
+      width: 250px;
+      border-radius: 20px;
+      margin: 10px;
+      border: none;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-top: 30px;
+      padding: 15px 30px;
+      background-color: #6c757d;
+      color: white;
+      text-decoration: none;
+      border-radius: 15px;
+      font-size: 22px;
+      transition: 0.2s;
+    }
+
+    .back-link:hover {
+      background-color: #555;
+    }
+  </style>
+
+  <script>
+    // Joystick logic
+    const maxRadius = 80;
+    let dragging = false;
+
+    window.onload = function() {
+      const joystick = document.getElementById("joystick");
+      const stick = document.getElementById("stick");
+
+      joystick.addEventListener("mousedown", start);
+      joystick.addEventListener("touchstart", start);
+      document.addEventListener("mouseup", end);
+      document.addEventListener("touchend", end);
+      document.addEventListener("mousemove", move);
+      document.addEventListener("touchmove", move);
+
+      function start(e) { dragging = true; }
+      function end(e) {
+        dragging = false;
+        stick.style.left = "70px";
+        stick.style.top = "70px";
+        send(0, 0);
+      }
+
+      function move(e) {
+        if (!dragging) return;
+        const rect = joystick.getBoundingClientRect();
+        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left - 100;
+        const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top - 100;
+
+        const dist = Math.min(Math.sqrt(x*x + y*y), maxRadius);
+        const angle = Math.atan2(y, x);
+        const nx = Math.cos(angle) * dist;
+        const ny = Math.sin(angle) * dist;
+
+        stick.style.left = `${nx + 100 - 30}px`;
+        stick.style.top = `${ny + 100 - 30}px`;
+
+        send((nx / maxRadius).toFixed(2), (-ny / maxRadius).toFixed(2));
+      }
+
+      function send(x, y) {
+        fetch(`/joystick_move?x=${x}&y=${y}`).catch(err => console.error(err));
+      }
+
+      // Live sensor updates
+      const evtSource = new EventSource("/");
+      evtSource.onmessage = function(event) {
+        const data = event.data.trim();
+        const match = data.match(/b(\d+)c(\d+)d(\d+)/);
+        if (match) {
+          const bumper = parseInt(match[1]);
+          const cliff = parseInt(match[2]);
+          const drop = parseInt(match[3]);
+          document.getElementById("but1").style.backgroundColor = bumper > 0 ? "red" : "green";
+          document.getElementById("but2").style.backgroundColor = drop > 0 ? "red" : "green";
+          document.getElementById("but3").style.backgroundColor = cliff > 0 ? "red" : "green";
+        }
+      };
+    };
+  </script>
+</head>
+
+<body>
+
+  <h1>ECEN4213 IoT — Joystick Control</h1>
+
+  <img id="videoStream" src="{{ url_for('video_feed') }}" alt="Video Feed">
+
+  <div id="joystick">
+    <div id="stick"></div>
+  </div>
+
+  <div class="sensor-row">
+    <button class="sensor-btn" id="but1">Bumper</button>
+    <button class="sensor-btn" id="but2">WheelDrop</button>
+    <button class="sensor-btn" id="but3">Cliff</button>
+  </div>
+
+  <a class="back-link" href="/">⬅ Return to D-Pad Mode</a>
+
+</body>
+</html>

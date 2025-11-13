@@ -1,108 +1,166 @@
-
-
+<!DOCTYPE html>
 <html>
-  <head>
-    <title>ECEN4213 IoT</title>
-    <script src="http://code.jquery.com/jquery-latest.js"></script>
-    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"> </script>
-    
-    <script src="../static/parse_data.js"></script>
+<head>
+  <meta charset="utf-8">
+  <title>ECEN4213 IoT Dashboard</title>
+  
+  <!-- jQuery -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 
+  <style>
+    body {
+      text-align: center;
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+    }
 
-    <!-- callback function for the upbutton pushing event -->
-    <script>
-  $(function() {
-    $("#upbutton").click(function () {
-      $.getJSON('/UpFunction', {}, function(data) {});
+    h1 {
+      color: #333;
+    }
+
+    /* Live Video Stream */
+    #videoStream {
+      border: 3px solid #222;
+      border-radius: 15px;
+      width: 640px;
+      height: 480px;
+      object-fit: cover;
+    }
+
+    hr {
+      margin: 40px 0;
+    }
+
+    /* Sensor Buttons */
+    .sensor-row {
+      margin-top: 20px;
+    }
+
+    .sensor-btn {
+      font-size: 30px;
+      height: 100px;
+      width: 250px;
+      border-radius: 20px;
+      margin: 10px;
+      border: none;
+      transition: background-color 0.3s;
+    }
+
+    /* D-Pad Buttons */
+    .control-btn {
+      font-size: 40px;
+      height: 150px;
+      width: 150px;
+      border-radius: 20px;
+      margin: 10px;
+      border: none;
+      background-color: #4285f4;
+      color: white;
+      transition: background 0.2s;
+    }
+
+    .control-btn:hover {
+      background-color: #2a65c3;
+      cursor: pointer;
+    }
+  </style>
+
+  <script>
+    $(function() {
+      // Movement button handlers
+      $("#upbutton").click(() => $.getJSON('/UpFunction'));
+      $("#leftbutton").click(() => $.getJSON('/LeftFunction'));
+      $("#rightbutton").click(() => $.getJSON('/RightFunction'));
+      $("#downbutton").click(() => $.getJSON('/DownFunction'));
+      $("#stopbutton").click(() => $.getJSON('/StopFunction'));
     });
 
-    $("#leftbutton").click(function () {
-      $.getJSON('/LeftFunction', {}, function(data) {});
-    });
+    // Live sensor updates from Flask SSE
+    const evtSource = new EventSource("/");
+    evtSource.onmessage = function(event) {
+      const data = event.data.trim(); // Example format: "b1c0d0"
+      console.log("Sensor data:", data);
 
-    $("#rightbutton").click(function () {
-      $.getJSON('/RightFunction', {}, function(data) {});
-    });
+      // Extract b, c, d values
+      const match = data.match(/b(\d+)c(\d+)d(\d+)/);
+      if (match) {
+        const bumper = parseInt(match[1]);
+        const cliff = parseInt(match[2]);
+        const drop = parseInt(match[3]);
 
-    $("#downbutton").click(function () {
-      $.getJSON('/DownFunction', {}, function(data) {});
-    });
+        // Update Bumper button (red if triggered)
+        const bumperBtn = document.getElementById("but1");
+        if (bumper === 1) {
+          bumperBtn.style.backgroundColor = "red";
+          bumperBtn.innerText = "Right";
+        } else if (bumper === 2) {
+          bumperBtn.style.backgroundColor = "red";
+          bumperBtn.innerText = "Center";
+        } else if (bumper === 4) {
+          bumperBtn.style.backgroundColor = "red";
+          bumperBtn.innerText = "Left";
+        } else {
+          bumperBtn.style.backgroundColor = "green";
+          bumperBtn.innerText = "OFF";
+        }
 
-    $("#stopbutton").click(function () {
-      $.getJSON('/StopFunction', {}, function(data) {});
-    });
-  });
-</script>
+        // Update WheelDrop button
+        document.getElementById("but2").style.backgroundColor =
+          drop > 0 ? "red" : "green";
+        document.getElementById("but2").innerText = 
+          drop > 0 ? "ON" : "OFF";
+        // Update Cliff button
+        document.getElementById("but3").style.backgroundColor =
+          cliff > 0 ? "red" : "green";
+        document.getElementById("but3").innerText = 
+          cliff > 0 ? "ON" : "OFF";
+      }
+    };
+  </script>
+</head>
 
+<body>
 
+  <h1>ECEN4213 IoT — Live Streaming</h1>
 
+  <!-- Live Video Feed -->
+  <img id="videoStream" src="{{ url_for('video_feed') }}" alt="Video Feed">
 
+  <hr>
 
-    <style>
-		body {
-			text-align: center;
-		}
-    </style>
-  </head>
+  <!-- Sensor Status Display -->
+  <div class="sensor-row">
+    <button class="sensor-btn" id="bumperbutton">Bumper</button>
+    <button class="sensor-btn" id="wheelbutton">WheelDrop</button>
+    <button class="sensor-btn" id="cliffbutton">Cliff</button>
+  </div>
 
-  <body>
+  <div class="sensor-row">
+    <button class="sensor-btn" id="but1" style="background-color:red;">OFF</button>
+    <button class="sensor-btn" id="but2" style="background-color:red;">OFF</button>
+    <button class="sensor-btn" id="but3" style="background-color:red;">OFF</button>
+  </div>
 
-    <!-- image display module -->
-    <h1>Live Streaming</h1>
-    <img src="../static/img name.png" height="35%">
+  <hr>
 
-    <hr>
-
-    <!-- sensor status display module -->
+  <!-- Directional Pad -->
+  <div>
     <div>
-      <!-- module 2 sensor tag: Bumper, wheelDrop, Cilff -->	
-      <!-- sensor tag: Bumper, wheelDrop, Cilff -->
-
-      <!-- Bumper Button OFF state -->
-        <input style="font-size:40;height:150; width:300; border-radius:20px" type = "button" id = "bumperbutton" value = "Bumper" />
-        <!-- Wheel Button OFF state -->
-         <input style="font-size:40;height:150; width:300; border-radius:20px" type = "button" id = "wheelbutton" value = "WheelDrop" />
-        <!-- Cliff Button OFF state -->
-         <input style="font-size:40;height:150; width:300; border-radius:20px" type = "button" id = "cliffbutton" value = "Cliff" />
-
-      </div>
-
-      <div>
-        <!-- module 2 sensor status: on, off,… -->
-        <!-- Bumper Button ON state-->
-        <input style="font-size:40;height:150; width:300; border-radius:20px; background-color:red" type = "button" id = "but1" value = "OFF"/>
-        <!-- Wheel Button ON state-->
-         <input style="font-size:40;height:150; width:300; border-radius:20px; background-color:red" type = "button" id = "but2" value = "OFF"/>
-        <!-- Cliff Button ON state-->
-         <input style="font-size:40;height:150; width:300; border-radius:20px; background-color:red" type = "button" id = "but3" value = "OFF"/>
-      </div>
-        
-
-
-      <!-- D-pad module -->
-      <div>
-          <div>
-            <!-- up button -->
-          <input style="font-size:50;height:200px; width:200px; border-radius:20px" type = "button" id = "upbutton" value = "Up" />
-          
-          </div>
-          
-          <div>
-          <!-- left, stop and right button -->
-          <!-- Left Button -->
-          <input style="font-size:50;height:200; width:200; border-radius:20px" type = "button" id = "leftbutton" value = "Left" />
-          <!-- OFF Button -->
-          <input style="font-size:50;height:200; width:200; border-radius:20px" type = "button" id = "stopbutton" value = "Stop" />
-          <!-- Right Button -->
-          <input style="font-size:50;height:200; width:200; border-radius:20px" type = "button" id = "rightbutton" value = "Right" />
-
-          </div>
-          
-          <div>
-          <!-- down button -->
-          <input style="font-size:50;height:200; width:200; border-radius:20px" type = "button" id = "downbutton" value = "Down" />
-        </div>
+      <button class="control-btn" id="upbutton">↑ Up</button>
     </div>
 
-  </body>
+    <div>
+      <button class="control-btn" id="leftbutton">← Left</button>
+      <button class="control-btn" id="stopbutton" style="background-color: #d9534f;">■ Stop</button>
+      <button class="control-btn" id="rightbutton">→ Right</button>
+    </div>
+
+    <div>
+      <button class="control-btn" id="downbutton">↓ Down</button>
+    </div>
+  </div>
+
+  <a class="joystick-link" href="/joystick"> Switch to Joystick Mode</a>
+
+</body>
 </html>

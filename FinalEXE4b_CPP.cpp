@@ -41,17 +41,22 @@ void readData();
 
 void read_socket(){
 	char buffer[100];
+	float xpos;
+	float ypos;
 	while(1){
 		read(sock , buffer, 50);
 		/*Print the data to the terminal*/
 		cmd = buffer[0];
+		
+		
 		printf("received: %c\n",cmd);
 
 		// use cmd to control the robot movement
+		movement((int)((ypos/1.0)*200), (int)((xpos/1.0)*200));
 
-		
 		//clean the buffer with memset
 		
+		 memset(buffer, 0, sizeof(buffer));
 	}
 	
 }
@@ -59,7 +64,7 @@ void read_socket(){
 int main(){
 	setenv("WIRINGPI_GPIOMEM", "1", 1);
 	wiringPiSetup();
-	kobuki = serialOpen("/dev/kobuki", 115200);
+	kobuki = serialOpen("/dev/ttyUSB0", 115200);
 	createSocket();
 	char buffer[10];
 	std::thread  t(read_socket);
@@ -67,15 +72,16 @@ int main(){
 	while(serialDataAvail(kobuki) != -1)
 	{
 		// Read the sensor data.
-
+		readData();
 
 		// Construct an string data like 'b0c0d0', you can use "sprintf" function. You can also define your own data protocal.
-
+		sprintf(buffer, "b%dc%dd%d", bumper, cliff, drop);
 
 		// Send the sensor data through the socket
-
+		send(sock, buffer, sizeof(buffer), 0);
 		// Clear the buffer
 
+		memset(buffer, 0, sizeof(buffer));
 		// You can refer to the code in previous labs. 
 	}
 	serialClose(kobuki);

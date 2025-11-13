@@ -48,25 +48,54 @@ void read_socket(){
 		printf("received: %c\n",cmd);
 
 		// use cmd to control the robot movement
+		
+		
+		//Forward
+		if(cmd == 'u'){
+			printf("Going Forward\n");
+			movement(200, 0);
+		}
+		if(cmd == 'r'){
+			printf("Going Right\n");
+			movement(200, -200);
+		}
+		//turn left
+		if(cmd == 'l'){
+			printf("Going Left\n");
+			movement(200, 200);
+		}
+		if(cmd == 's'){
+			movement(0,0);
+		}
+		//Backward
+		if(cmd == 'd'){
+			printf("Going Backward\n");
+			movement(-200, 0);
+		}
+	}
 
 		
 		//clean the buffer with memset
-		
-	}
+		 memset(buffer, 0, sizeof(buffer));
+	
 	
 }
 
 int main(){
-	setenv("WIRINGPI_GPIOMEM", "1", 1);
-	wiringPiSetup();
-	kobuki = serialOpen("/dev/kobuki", 115200);
-	createSocket();
-	char buffer[10];
-	std::thread  t(read_socket);
-	while(serialDataAvail(kobuki) != -1);
-	serialClose(kobuki);
-	
-	return(0);
+    setenv("WIRINGPI_GPIOMEM", "1", 1);
+    wiringPiSetup();
+    kobuki = serialOpen("/dev/ttyUSB0", 115200);
+    createSocket();
+    char buffer[10];
+    std::thread  t(read_socket); // Thread starts
+
+    // Wait for the read_socket thread to finish
+    // This blocks the main thread from exiting
+    t.join(); 
+    
+    // This code will only be reached if t.join() returns
+    serialClose(kobuki);
+    return(0);
 }
 
 void movement(int sp, int r){

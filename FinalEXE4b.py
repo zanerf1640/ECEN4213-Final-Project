@@ -4,8 +4,7 @@
 # Import library to create webserver to host webpage
 from flask import Flask, render_template
 from flask import Flask, render_template, Response,redirect,request, url_for
-import itertools
-# import time
+
 from camera_pi import Camera
 import socket
 import time
@@ -30,7 +29,7 @@ connection, address = sock.accept()
 
 #Find the IP Address of your device
 #Use the 'ifconfig' terminal command, the address should be in the format  "XX.XXX.XXX.XXX"
-IP_Address = '10.227.13.100'
+IP_Address = '10.227.63.125'
 PORT = 8080
 #Connect the *.html page to the server and run as the default page
 bumper_data = "b0c0d0"
@@ -42,20 +41,12 @@ def receive_bumper_data():
             data = connection.recv(1024).decode('utf-8')
             if data:
                 bumper_data = data.strip()
-                print("Received bumper data:", bumper_data)
+                #print("Received bumper data:", bumper_data)
         except Exception as e:
             print("Socket read error:", e)
             break
 
 threading.Thread(target=receive_bumper_data, daemon=True).start()
-
-@app.route('/joystick')
-def joystick():
-    x = float(request.args.get('x', 0))
-    y = float(request.args.get('y', 0))
-    cmd = f"j{x:.2f} {y:.2f}"
-    connection.send(cmd.encode('utf-8'))
-    return render_template('Joystick.html')
 
 
 @app.route('/')
@@ -69,6 +60,29 @@ def index():
         return Response(events(), content_type='text/event-stream')
     return render_template('FinalEXE3.html')
 
+@app.route("/joystick")
+def joystick():
+    # 1. Get the raw strings (e.g., "0.53", "-0.99")
+    x_raw = request.args.get("x", "0")
+    y_raw = request.args.get("y", "0")
+
+    try:
+        # 2. Convert String -> Float -> Multiply -> Integer
+        # Example: "0.53" -> 0.53 -> 53.0 -> 53
+        x_val = int(float(x_raw) * 100)
+        y_val = int(float(y_raw) * 100)
+    except ValueError:
+        x_val = 0
+        y_val = 0
+
+    # 3. Create the integer string with a Newline character
+    # The newline '\n' helps C++ know the message is finished
+    cmd = f"{x_val} {y_val}\n"
+    
+    connection.send(cmd.encode("utf-8"))
+    print(f"Sent: {cmd.strip()}") # Debug print
+    
+    return render_template("Joystick.html")
 
 
     
@@ -94,9 +108,10 @@ def launch_socket_server(connection):
     a='b0c0d0'
     while True:        
         info = connection.recv(6).decode("utf-8")
-        print('info:', info)
+        #print('info:', info)
         if info != a and len(info)>0:
             a = info
+
 
 
 @app.route('/UpFunction')

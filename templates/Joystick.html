@@ -2,158 +2,191 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>ECEN4213 IoT — Joystick Mode</title>
+  <title>ECEN4213 IoT Dashboard</title>
+  
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+  <script src="{{ url_for('static', filename='joy.js') }}"></script>
 
   <style>
     body {
       text-align: center;
       font-family: Arial, sans-serif;
       background-color: #f9f9f9;
+      margin: 0; padding: 20px;
     }
 
-    h1 {
-      color: #333;
-    }
+    h1 { color: #333; }
 
+    /* Live Video Stream */
     #videoStream {
       border: 3px solid #222;
       border-radius: 15px;
       width: 640px;
       height: 480px;
       object-fit: cover;
+      background-color: #000;
     }
 
-    #joystick {
-      width: 200px;
-      height: 200px;
-      background: #ddd;
-      border-radius: 50%;
-      margin: 40px auto;
-      position: relative;
-      touch-action: none;
-    }
+    hr { margin: 30px 0; }
 
-    #stick {
-      width: 60px;
-      height: 60px;
-      background: #4285f4;
-      border-radius: 50%;
-      position: absolute;
-      top: 70px;
-      left: 70px;
-      transition: 0.05s;
-    }
-
+    /* Sensor Buttons */
     .sensor-row {
       margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
     }
 
     .sensor-btn {
-      font-size: 30px;
-      height: 100px;
-      width: 250px;
-      border-radius: 20px;
-      margin: 10px;
-      border: none;
-    }
-
-    .back-link {
-      display: inline-block;
-      margin-top: 30px;
-      padding: 15px 30px;
-      background-color: #6c757d;
-      color: white;
-      text-decoration: none;
+      font-size: 24px;
+      height: 80px;
+      width: 200px;
       border-radius: 15px;
-      font-size: 22px;
-      transition: 0.2s;
+      border: none;
+      color: white;
+      background-color: #555; /* Default Gray */
+      transition: background-color 0.3s;
     }
 
-    .back-link:hover {
-      background-color: #555;
+    /* Joystick Container styling */
+    #joyDiv {
+      width: 200px;
+      height: 200px;
+      margin: 20px auto;
+    }
+
+    #joystick-status {
+        font-family: monospace;
+        font-size: 1.2em;
+        color: #555;
     }
   </style>
 
   <script>
-    // Joystick logic
-    const maxRadius = 80;
-    let dragging = false;
+    // ==================================================
+    // 1. SENSOR DATA LOGIC (Your original code)
+    // ==================================================
+    const evtSource = new EventSource("/");
+    
+    evtSource.onmessage = function(event) {
+      const data = event.data.trim(); // Example format: "b1c0d0"
+      // console.log("Sensor data:", data);
 
-    window.onload = function() {
-      const joystick = document.getElementById("joystick");
-      const stick = document.getElementById("stick");
+      // Extract b, c, d values
+      const match = data.match(/b(\d+)c(\d+)d(\d+)/);
+      
+      if (match) {
+        const bumper = parseInt(match[1]);
+        const cliff = parseInt(match[2]);
+        const drop = parseInt(match[3]);
 
-      joystick.addEventListener("mousedown", start);
-      joystick.addEventListener("touchstart", start);
-      document.addEventListener("mouseup", end);
-      document.addEventListener("touchend", end);
-      document.addEventListener("mousemove", move);
-      document.addEventListener("touchmove", move);
-
-      function start(e) { dragging = true; }
-      function end(e) {
-        dragging = false;
-        stick.style.left = "70px";
-        stick.style.top = "70px";
-        send(0, 0);
-      }
-
-      function move(e) {
-        if (!dragging) return;
-        const rect = joystick.getBoundingClientRect();
-        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left - 100;
-        const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top - 100;
-
-        const dist = Math.min(Math.sqrt(x*x + y*y), maxRadius);
-        const angle = Math.atan2(y, x);
-        const nx = Math.cos(angle) * dist;
-        const ny = Math.sin(angle) * dist;
-
-        stick.style.left = `${nx + 100 - 30}px`;
-        stick.style.top = `${ny + 100 - 30}px`;
-
-        send((nx / maxRadius).toFixed(2), (-ny / maxRadius).toFixed(2));
-      }
-
-      function send(x, y) {
-        fetch(`/joystick_move?x=${x}&y=${y}`).catch(err => console.error(err));
-      }
-
-      // Live sensor updates
-      const evtSource = new EventSource("/");
-      evtSource.onmessage = function(event) {
-        const data = event.data.trim();
-        const match = data.match(/b(\d+)c(\d+)d(\d+)/);
-        if (match) {
-          const bumper = parseInt(match[1]);
-          const cliff = parseInt(match[2]);
-          const drop = parseInt(match[3]);
-          document.getElementById("but1").style.backgroundColor = bumper > 0 ? "red" : "green";
-          document.getElementById("but2").style.backgroundColor = drop > 0 ? "red" : "green";
-          document.getElementById("but3").style.backgroundColor = cliff > 0 ? "red" : "green";
+        // --- Update Bumper button ---
+        const bumperBtn = document.getElementById("but1");
+        
+        if (bumper === 1) {
+          bumperBtn.style.backgroundColor = "red";
+          bumperBtn.innerText = "Right Hit";
+        } else if (bumper === 2) {
+          bumperBtn.style.backgroundColor = "red";
+          bumperBtn.innerText = "Center Hit";
+        } else if (bumper === 4) {
+          bumperBtn.style.backgroundColor = "red";
+          bumperBtn.innerText = "Left Hit";
+        } else {
+          bumperBtn.style.backgroundColor = "green";
+          bumperBtn.innerText = "Safe";
         }
-      };
+
+        // --- Update WheelDrop button ---
+        const dropBtn = document.getElementById("but2");
+        if (drop > 0) {
+            dropBtn.style.backgroundColor = "red";
+            dropBtn.innerText = "DROP!";
+        } else {
+            dropBtn.style.backgroundColor = "green";
+            dropBtn.innerText = "Ground";
+        }
+
+        // --- Update Cliff button ---
+        const cliffBtn = document.getElementById("but3");
+        if (cliff > 0) {
+            cliffBtn.style.backgroundColor = "red";
+            cliffBtn.innerText = "CLIFF!";
+        } else {
+            cliffBtn.style.backgroundColor = "green";
+            cliffBtn.innerText = "Safe";
+        }
+      }
     };
   </script>
 </head>
 
 <body>
 
-  <h1>ECEN4213 IoT — Joystick Control</h1>
+  <h1>ECEN4213 IoT — Live Dashboard</h1>
 
-  <img id="videoStream" src="{{ url_for('video_feed') }}" alt="Video Feed">
+  <img id="videoStream" src="{{ url_for('video_feed') }}" alt="Waiting for Camera...">
 
-  <div id="joystick">
-    <div id="stick"></div>
+  <hr>
+
+  <div class="sensor-row">
+    <button class="sensor-btn">Bumper Status</button>
+    <button class="sensor-btn">Wheel Status</button>
+    <button class="sensor-btn">Cliff Status</button>
   </div>
 
   <div class="sensor-row">
-    <button class="sensor-btn" id="but1">Bumper</button>
-    <button class="sensor-btn" id="but2">WheelDrop</button>
-    <button class="sensor-btn" id="but3">Cliff</button>
+    <button class="sensor-btn" id="but1" style="background-color:green;">Safe</button>
+    <button class="sensor-btn" id="but2" style="background-color:green;">Ground</button>
+    <button class="sensor-btn" id="but3" style="background-color:green;">Safe</button>
   </div>
 
-  <a class="back-link" href="/">⬅ Return to D-Pad Mode</a>
+  <hr>
+
+  <h2>Manual Control</h2>
+  
+  <div id="joyDiv"></div>
+  
+  <p id="joystick-status">X: 0.00 | Y: 0.00</p>
+
+  <script>
+    // ==================================================
+    // 2. JOYSTICK LOGIC (Connecting to Flask)
+    // ==================================================
+    
+    // Initialize the JoyStick object
+    var joy = new JoyStick('joyDiv', {
+        "title": "joystick",
+        "autoReturnToCenter": true,
+        "internalFillColor": "#00AA00",
+        "externalStrokeColor": "#008000"
+    });
+
+    // Loop to send data every 100ms
+    setInterval(function(){
+        
+        // Get values (-100 to 100) from the library
+        var xRaw = joy.GetX();
+        var yRaw = joy.GetY();
+
+        // Convert to float (-1.0 to 1.0)
+        var xFloat = parseFloat(xRaw);
+        var yFloat = parseFloat(yRaw);
+
+        // Update on-screen text
+        document.getElementById("joystick-status").innerText = 
+            "X: " + xFloat.toFixed(2) + " | Y: " + yFloat.toFixed(2);
+
+        // Send to Python via Fetch API
+        // This hits the @app.route("/joystick") in your Python file
+        fetch("/joystick?x=" + xFloat.toFixed(2) + "&y=" + yFloat.toFixed(2))
+            .catch(err => console.log("Socket error:", err));
+
+    }, 100); // 100 milliseconds = 10 updates per second
+  </script>
+
+  <a href="{{ (url_for('index')) }}"> Return to Home Page</a>
 
 </body>
 </html>

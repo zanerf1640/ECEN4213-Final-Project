@@ -1,4 +1,4 @@
-// g++ -std=c++11 -o FinalEXE4b_CPP FinalEXE4b_CPP.cpp -lwiringPi -pthread
+// g++ -std=c++11 -o FinalEXE4b_CPP FinalEXE4b_CPP.cpp -lwiringPi -pthread ./FinalEXE4b_CPP
 
 
 #include <iostream>
@@ -40,25 +40,61 @@ void readData();
 
 
 void read_socket(){
-	char buffer[100];
-	float xpos;
-	float ypos;
-	while(1){
-		read(sock , buffer, 50);
-		/*Print the data to the terminal*/
-		cmd = buffer[0];
-		
-		
-		printf("received: %c\n",cmd);
+    char buffer[200];
+    int x_val = 0; 
+    int y_val = 0;
+    
+    printf("Socket Thread Started...\n");
 
-		// use cmd to control the robot movement
-		movement((int)((ypos/1.0)*200), (int)((xpos/1.0)*200));
+    while(1){
+        // 1. Read the data
+        // We read up to 199 bytes to leave room for null terminator
+        int valread = read(sock, buffer, 199);
+        
+        if(valread > 0) {
+            // 2. Null-terminate the string
+            buffer[valread] = '\0';
 
-		//clean the buffer with memset
+            // 3. Parse the string "50 -100"
+            // %d reads an integer. It stops if it hits a non-number (like garbage data)
+            int items = sscanf(buffer, "%d %d", &x_val, &y_val);
+
+            if (items == 2) {
+                
+				
+				if(x_val == 100){
+					y_val = 100 - abs(y_val);
+					x_val = -1;
+					
+				}
+				else if(x_val == -100){
+					y_val = 100 - abs(y_val);
+					x_val = 1;
+				}
+				else if(y_val == 100 || y_val == -100){
+					x_val = 0;
+				}
+
+				printf("Received X: %d, Y: %d\n", x_val, y_val);
+                // 4. Calculate Speed and Radius
+                // CRITICAL: Use (float) to prevent integer division resulting in 0
+                // Example: 50 / 100 = 0 (Integer math)
+                // Example: 50.0 / 100.0 = 0.5 (Float math)
+                int speed = (int)(y_val) / 1000; // Max speed 300mm/s
+                int radius = (int)(x_val) / 1000;
+				delay(50);
+
+                // Send to robot
+                movement(speed, radius);
+				
+				
+            }
+        }
 		
-		 memset(buffer, 0, sizeof(buffer));
-	}
-	
+        
+        // Clear buffer for next pass
+        memset(buffer, 0, sizeof(buffer));
+    }
 }
 
 int main(){

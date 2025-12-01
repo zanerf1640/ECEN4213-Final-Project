@@ -98,12 +98,14 @@ void read_socket(){
 }
 
 int main(){
+
 	setenv("WIRINGPI_GPIOMEM", "1", 1);
 	wiringPiSetup();
 	kobuki = serialOpen("/dev/ttyUSB0", 115200);
 	createSocket();
 	char buffer[10];
 	std::thread  t(read_socket);
+	
 
 	while(serialDataAvail(kobuki) != -1)
 	{

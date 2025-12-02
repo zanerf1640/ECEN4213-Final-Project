@@ -32,21 +32,6 @@ connection, address = sock.accept()
 IP_Address = '10.227.63.125'
 PORT = 8080
 #Connect the *.html page to the server and run as the default page
-bumper_data = "b0c0d0"
-
-def receive_bumper_data():
-    global bumper_data
-    while True:
-        try:
-            data = connection.recv(1024).decode('utf-8')
-            if data:
-                bumper_data = data.strip()
-                #print("Received bumper data:", bumper_data)
-        except Exception as e:
-            print("Socket read error:", e)
-            break
-
-threading.Thread(target=receive_bumper_data, daemon=True).start()
 
 
 @app.route('/')
@@ -59,31 +44,6 @@ def index():
                 time.sleep(0.5)
         return Response(events(), content_type='text/event-stream')
     return render_template('FinalEXE3.html')
-
-@app.route("/joystick")
-def joystick():
-    # 1. Get the raw strings (e.g., "0.53", "-0.99")
-    x_raw = request.args.get("x", "0")
-    y_raw = request.args.get("y", "0")
-
-    try:
-        # 2. Convert String -> Float -> Multiply -> Integer
-        # Example: "0.53" -> 0.53 -> 53.0 -> 53
-        x_val = int(float(x_raw) * 100)
-        y_val = int(float(y_raw) * 100)
-    except ValueError:
-        x_val = 0
-        y_val = 0
-
-    # 3. Create the integer string with a Newline character
-    # The newline '\n' helps C++ know the message is finished
-    cmd = f"{x_val} {y_val}\n"
-    
-    connection.send(cmd.encode("utf-8"))
-    print(f"Sent: {cmd.strip()}") # Debug print
-    
-    return render_template("Joystick.html")
-
 
     
 def gen(camera):

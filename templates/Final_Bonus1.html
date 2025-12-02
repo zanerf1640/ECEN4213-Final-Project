@@ -13,8 +13,15 @@
     function(data) { }); return false; }); }); </script> 
 
     <!-- add four more functions for the left, right, down and stop buttons -->
-    <script type=text/javascript> $(function() { $("#button_id (change to corresponding button id in the D-pad)").click(function (event) { $.getJSON('/function_name (change to the function name used in the Python code)', { },
+    <script type=text/javascript> $(function() { $("#downbutton").click(function (event) { $.getJSON('/DownFunction', { },
       function(data) { }); return false; }); }); </script> 
+
+    <script type=text/javascript> $(function() { $("#leftbutton").click(function (event) { $.getJSON('/LeftFunction', { },
+      function(data) { }); return false; }); }); </script> 
+    <script type=text/javascript> $(function() { $("#rightbutton").click(function (event) { $.getJSON('/RightFunction', { },
+      function(data) { }); return false; }); }); </script> 
+    <script type=text/javascript> $(function() { $("#stopbutton").click(function (event) { $.getJSON('/StopFunction', { },
+      function(data) { }); return false; }); }); </script>  
 
 
     <style>

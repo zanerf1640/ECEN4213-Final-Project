@@ -1,5 +1,5 @@
-// g++ -std=c++11 -o FinalB2_CPP FinalB2_CPP.cpp -lwiringPi -pthread
-
+// g++ -std=c++11 -o Final_Bonus2_CPP Final_Bonus2_CPP.cpp -lwiringPi -pthread
+// ./Final_Bonus2_CPP
 
 #include <iostream>
 #include <unistd.h>
@@ -194,35 +194,34 @@ void readData(){
 
 
 int speed(string value){
-	int ind = value.find('x', 0)+5;
-	int ind2 = value.find("\'", ind);
-	string index = value.substr(ind,ind2-ind);
+	int speed = value.find('x', 0)+5;
+	int speed1 = value.find("\'", speed);
+	string index = value.substr(speed,speed1-speed);
 	printf("%s\n", index);
-	ind = -stoi(index);
-	// cout<<ind<<endl;
-	if (ind > 50)  ind = 50;
-	if (ind < -50) ind = -50;
-	if (ind>-20 && ind<5) ind = 0;
-
+	speed = -stoi(index);
 	
-	return 10*ind;
+	if (speed > 50)  speed = 50;
+	if (speed < -50) speed = -50;
+	if (speed>-20 && speed<5) speed = 0;
+
+	return 10*speed;
 }
 
 int radius(string value){
-	int ind0 = value.find('z', 0) + 5;
-    int ind = value.find("\',", ind0);
-	string index = value.substr(ind0,(ind - ind0));
+	int rad = value.find('z', 0) + 5;
+    int rad1 = value.find("\',", rad);
+	string index = value.substr(rad,(rad1 - rad));
 
-	ind = stoi(index);
-	// cout<<ind<<endl;
-	if (ind>=0 && ind <= 20) ind = 0;
-	if (ind>=340 && ind <= 360) ind = 0;
-	if (ind>=0 && ind <= 180){
-		ind = ind * 2;
+	rad = stoi(index);
+	
+	if (rad>=0 && rad <= 20) rad = 0;
+	if (rad>=340 && rad <= 360) rad = 0;
+	if (rad>=0 && rad <= 180){
+		rad = rad * 2;
 	}
 	else{
-		ind = (ind-360)*2;
+		rad = (rad-360)*2;
 	}
-    return ind;
+    return rad;
 
 }

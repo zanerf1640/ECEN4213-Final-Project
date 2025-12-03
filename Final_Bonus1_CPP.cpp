@@ -1,5 +1,5 @@
-// g++ -std=c++11 -o FinalB1_CPP FinalB1_CPP.cpp -lwiringPi -pthread
-
+// g++ -std=c++11 -o Final_Bonus1_CPP Final_Bonus1_CPP.cpp -lwiringPi -pthread
+// ./Final_Bonus1_CPP
 
 #include <iostream>
 #include <unistd.h>

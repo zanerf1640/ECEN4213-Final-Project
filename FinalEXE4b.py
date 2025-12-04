@@ -29,7 +29,7 @@ connection, address = sock.accept()
 
 #Find the IP Address of your device
 #Use the 'ifconfig' terminal command, the address should be in the format  "XX.XXX.XXX.XXX"
-IP_Address = '10.227.63.125'
+IP_Address = '10.227.114.90'
 PORT = 8080
 #Connect the *.html page to the server and run as the default page
 
@@ -38,9 +38,8 @@ PORT = 8080
 def index():
     if request.headers.get('accept') == 'text/event-stream':
         def events():
-            global bumper_data
             while True:
-                yield f"data: {bumper_data}\n\n"
+                yield f"data: {info}\n\n"
                 time.sleep(0.5)
         return Response(events(), content_type='text/event-stream')
     return render_template('FinalEXE3.html')

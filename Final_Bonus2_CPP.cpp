@@ -34,6 +34,7 @@ unsigned int drop;
 unsigned int cliff;
 unsigned int button;
 char cmd = 's';
+bool kobuki_running = true;
 
 void readData();
 int speed(string); // this function can parse the received buffer and return the speed value
@@ -41,31 +42,55 @@ int radius(string); // this function can parse the received buffer and return th
 
 
 void read_socket(){
-	char buffer[100];
-	while(1){
-		int n = read(sock , buffer, 50);
-		/*Print the data to the terminal*/
-		cmd = buffer[0];
-		printf("received: %c\n",cmd);
-		// parse sensor data from the buffer
-		string msg(buffer, n);
+    char buffer[1024]; // Increase buffer size
+    while(1){
+        // Read from socket
+        int n = read(sock , buffer, 1024);
+        
+        if (n > 0) {
+            // buffer might contain multiple commands stuck together 
+            // e.g., "{speed:10}{speed:11}{speed:12}"
+            // We only care about the LAST one to reduce latency.
+            
+            string msg(buffer, n);
+            
+            // Find the LAST occurrence of your data markers (simple heuristic)
+            // Or better: Just process the data without blocking.
+            
+            int spd = speed(msg);
+            int rad = radius(msg);
+            
+            if(spd>=200) spd = 200;
+            if(spd<=-200) spd = -200;
 
-		int speed = speed(msg);
-		int radius = radius (msg);
+			// 1. Clamp values greater than 50
+			if (rad > 30) {
+				rad = 30;
+			} 
+			// 2. Clamp values less than -50
+			else if (rad < -30) {
+				rad = -30;
+			} 
+			// 3. If it is "less than the other values" (between -50 and 50), make it 0
+			else {
+				rad = 0;
+			}
 
-		// use the sensor data to control the robot movement
-		movement(speed, radius);
-		
-		//clean the buffer
-		memset(buffer, 0, sizeof(buffer));
-	}
-	
+            printf("Speed: %d Radius: %d\n", spd, rad);
+            
+            // Send to robot
+            movement(spd, rad); 
+            
+            // clear buffer
+            memset(buffer, 0, sizeof(buffer));
+        }
+    }
 }
 
 int main(){
 	setenv("WIRINGPI_GPIOMEM", "1", 1);
 	wiringPiSetup();
-	kobuki = serialOpen("/dev/kobuki", 115200);
+	kobuki = serialOpen("/dev/ttyUSB0", 115200);
 	createSocket();
 	char buffer[10];
 	// char* p;
@@ -85,7 +110,6 @@ int main(){
 		memset(buffer, 0, sizeof(buffer));
 		// You can refer to the code in previous labs. 
 	}
-	serialClose(kobuki);
 	
 	return(0);
 }

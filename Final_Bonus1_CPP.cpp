@@ -49,22 +49,24 @@ void read_socket(){
 		int n = read(sock , buffer, 50);
 		/*Print the data to the terminal*/
 		cmd = buffer[0];
-		printf("received: %c\n",cmd);
+		printf("received: %c\n",n);
 
 		string msg(buffer, n);
 
-		// parse xpos and ypos from the buffer
-		int x_position = x_position(msg);
-		int y_position = y_position(msg);
-		printf("X Position: %d ", x_position);
-		printf("Y Position: %d\n", y_position);
+		// parse x-position and y-position from the buffer
+		int x_pos = x_position(msg);
+		int y_pos = y_position(msg);
+		printf("X Position: %d ", x_pos);
+		printf("Y Position: %d\n", y_pos);
 
 		// use xpos and ypos to control the robot movement
-		movement(y_position, x_position);
-		if(y_position == 0) movement(x_position, 1);
+		movement(y_pos, x_pos);
+		
+		if(y_pos == 0) 
+			movement(x_pos, 1);
 		
 		//clean the buffer
-		memset(buffer, 0, sizeof(buffer));
+		memset(buffer, '0', sizeof(buffer));
 	}
 	
 }
@@ -72,10 +74,9 @@ void read_socket(){
 int main(){
 	setenv("WIRINGPI_GPIOMEM", "1", 1);
 	wiringPiSetup();
-	kobuki = serialOpen("/dev/kobuki", 115200);
+	kobuki = serialOpen("/dev/ttyUSB0", 115200);
 	createSocket();
 	char buffer[10];
-	// char* p;
 	std::thread  t(read_socket);
 	
 
@@ -85,14 +86,14 @@ int main(){
 		readData();
 
 		// Construct an string data like 'b0c0d0', you can use "sprintf" function. You can also define your own data protocal.
-		char data[10];
-		sprintf(data, "b%dc%dd%d", bumper, drop, cliff);
+		sprintf(buffer, "b%dc%dd%d", bumper, drop, cliff);
 
 		// Send the sensor data through the socket
-		send(sock, data, strlen(data), 0);
+		send(sock, buffer, strlen(buffer), 0);
 		// Clear the buffer
 		memset(&buffer, '0', sizeof(buffer));
-		// You can refer to the code in previous labs. 
+		// You can refer to the code in previous labs.
+		usleep(1000); 
 	}
 	serialClose(kobuki);
 
@@ -200,7 +201,6 @@ void readData(){
 		/*Pause the script so the data read receive rate is
 		the same as the Kobuki send rate.*/
 		usleep(20000);
-		
 }
 
 
